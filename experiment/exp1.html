@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title> Choose the better model! </title>
+    <script src="jspsych/dist/jspsych.js"></script>
+    <script src="jspsych/dist/plugin-browser-check.js"></script>
+    <script src="jspsych/dist/plugin-external-html.js"></script>
+    <script src="jspsych/dist/plugin-fullscreen.js"></script>
+    <script src="jspsych/dist/plugin-survey.js"></script>
+    <script src="jspsych/dist/plugin-survey-multi-choice.js"></script>
+    <script src="jspsych/dist/plugin-instructions.js"></script>
+    <script src="jspsych/dist/plugin-call-function.js"></script>
+    <script src="jspsych/dist/plugin-html-keyboard-response.js"></script>
+    <script src="jspsych/dist/plugin-html-button-response.js"></script>
+    <script src="jspsych/dist/plugin-html-slider-response.js"></script>
+    <script src="jspsych/dist/plugin-preload.js"></script>
+    <script src="utils/sampleRandomVars.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.slim.min.js"></script>
+    <link href="jspsych/dist/jspsych.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="https://unpkg.com/@jspsych/plugin-survey@0.2.2/css/survey.css">
+    <style>
+        .hidden_slider_thumb input#jspsych-html-slider-response-response.jspsych-slider::-webkit-slider-thumb { opacity: 0; }
+		.hidden_slider_thumb input#jspsych-html-slider-response-response.jspsych-slider::-moz-range-thumb { opacity: 0; }
+        .row { display: flex; }
+        .column { flex: 50%; }
+    </style>
+  </head>
+  <body></body>
+  <script>
+
+  	const jsPsych = initJsPsych(
+		{
+            // show_progress_bar: true
+		//   on_finish: function() {
+		//     jsPsych.data.get().localSave('csv','test_data.csv');
+		//   }
+		}
+        
+  	);
+
+    // General knobs to turn
+    var num_trials_per_Ntrain = 48; // Does not count attention check trials below
+    var num_attention_checks_per_Ntrain = 2;
+    var N_trains_raw = [10,50]; // First condition corresponds to stimulus1_... to stimulus48_...
+    var model_names = ["Model A", "Model B"];
+    var num_conditions = N_trains_raw.length;
+    var num_trials = num_trials_per_Ntrain * num_conditions; // Each trial is a separate problem
+    var img_idx_Ntrain10 = jsPsych.randomization.shuffle(createIntegerRange(0, num_trials_per_Ntrain));
+    var img_idx_Ntrain50 = jsPsych.randomization.shuffle(createIntegerRange(48, 48+num_trials_per_Ntrain));
+    
+    // For each subject, randomize which N_train condition to do first.
+    var first_condition_idx = Number(Math.random()<0.5);
+    // For each subject, randomize which model family is consistently displayed on the left;
+    //var left_model_display =  Array(num_trials).fill(Number(Math.random()<0.5));
+    // I can also randomize the model family displays by each trial:
+    var left_model_display = Array.from({ length: num_trials }, () => jsPsych.randomization.sampleBernoulli(0.5));
+    
+    // This is the sequence of images to display---randomized for each participant due to the shuffling above.
+    // If stimulus_img_idxs[0] = 45, then stimulus45_....png is used for Trial 0. 
+    var stimulus_img_idxs = first_condition_idx<0.5?  img_idx_Ntrain10.concat(img_idx_Ntrain50) : img_idx_Ntrain50.concat(img_idx_Ntrain10); 
+    var N_trains = first_condition_idx<0.5? N_trains_raw : [N_trains_raw[1],N_trains_raw[0]];
+
+    var base_pay_dollars = 2;
+    var bonus_max_dollars = 2.5;
+
+
+    // Load images
+    var num_instructions_examples = 4;
+    var instructions_imgs_raw = [];
+    for (let t=0; t<num_instructions_examples; t++){
+        var stimulus_img_name = `img_Ntrain1050/instructions_trial${t}_`;
+        if(t<(num_instructions_examples/2)){ // Trial t has N_train=6;
+            stimulus_img_name+='0';
+            if(t<(num_instructions_examples/4)){ // Trial t has true model linear
+                stimulus_img_name+='0';
+            } else { // Trial t has true model poly
+                stimulus_img_name+='1';
+            }
+        } else {// Trial t has N_train=50;
+            stimulus_img_name+='1';
+            if(t<(num_instructions_examples*3/4)){ // Trial t has true model linear
+                stimulus_img_name+='0';
+            } else { // Trial t has true model poly
+                stimulus_img_name+='1';
+            }
+        }
+        var stimulus_img_name_train = stimulus_img_name +'_train.png';
+        var stimulus_img_name_traintest = stimulus_img_name +'_traintest.png';
+        var stimulus_img_name_linear = stimulus_img_name +'_01.png';
+        var stimulus_img_name_poly = stimulus_img_name +'_11.png';
+        instructions_imgs_raw.push([stimulus_img_name_train, stimulus_img_name_traintest, stimulus_img_name_linear, stimulus_img_name_poly]);
+    }
+
+    // Shared N_train = 30 for instructions
+    var instructions_shared_imgs = [];
+    for (let t=num_instructions_examples; t<(num_instructions_examples+2); t++){
+        var stimulus_img_name = `img_Ntrain1050/instructions_trial${t}_`;
+        stimulus_img_name+='2'; // Trial t has N_train=30;
+        if(t==num_instructions_examples){ // Trial t has true model linear
+            stimulus_img_name+='0';
+        } else { // Trial t has true model poly
+            stimulus_img_name+='1';
+        }
+        var stimulus_img_name_train = stimulus_img_name +'_train.png';
+        var stimulus_img_name_traintest = stimulus_img_name +'_traintest.png';
+        var stimulus_img_name_linear = stimulus_img_name +'_01.png';
+        var stimulus_img_name_poly = stimulus_img_name +'_11.png';
+        instructions_shared_imgs.push([stimulus_img_name_train, stimulus_img_name_traintest, stimulus_img_name_linear, stimulus_img_name_poly]);
+    }
+
+    var instructions_example_random = sampleRandomInt(0,Math.floor(num_instructions_examples/2)-1);
+    var instruction1_example_random = sampleRandomInt(0,Math.floor(num_instructions_examples/2)-1);
+    var instruction2_example_random = sampleRandomInt(0,Math.floor(num_instructions_examples/2)-1);
+
+    var instructions_imgs = instructions_shared_imgs[instructions_example_random];
+    var instructions1_imgs = first_condition_idx<0.5? instructions_imgs_raw[instruction1_example_random]: instructions_imgs_raw[num_instructions_examples/2+instruction1_example_random]
+    var instructions2_imgs = first_condition_idx>=0.5? instructions_imgs_raw[instruction2_example_random]: instructions_imgs_raw[num_instructions_examples/2+instruction2_example_random]
+
+    
+    var stimulus_imgs_raw = [];
+    for (let t=0; t<num_trials; t++){
+        var stimulus_img_name = `img_Ntrain1050/trial${t}_`;
+        if(t<num_trials_per_Ntrain){ // Trial t has N_train=6;
+            stimulus_img_name+='0';
+            if(t<(num_trials_per_Ntrain/2)){ // Trial t has true model linear
+                stimulus_img_name+='0';
+            } else { // Trial t has true model poly
+                stimulus_img_name+='1';
+            }
+        } else {// Trial t has N_train=50;
+            stimulus_img_name+='1';
+            if(t<(num_trials_per_Ntrain*3/2)){ // Trial t has true model linear
+                stimulus_img_name+='0';
+            } else { // Trial t has true model poly
+                stimulus_img_name+='1';
+            }
+        }
+        var stimulus_img_name_linear = stimulus_img_name +'_01.png';
+        var stimulus_img_name_poly = stimulus_img_name +'_11.png';
+        stimulus_imgs_raw.push([stimulus_img_name_linear, stimulus_img_name_poly]);
+    }
+    // Shuffle images according to stimulus_img_idxs entries---and the left image is always the first entry in second-level vectors.
+    var stimulus_imgs = []; 
+    for (let k=0; k<num_trials; k++){
+        stimulus_imgs.push([stimulus_imgs_raw[stimulus_img_idxs[k]][left_model_display[k]], stimulus_imgs_raw[stimulus_img_idxs[k]][1-left_model_display[k]]])
+    }
+    // console.log(first_condition_idx)
+    // console.log(left_model_display)
+    // console.log(stimulus_imgs)
+
+
+    
+    
+    // For instructions, need to display solutions and their affording objects
+    let affording_objects_instructions = `
+        <p><div style="
+            display: grid;
+            grid-template-columns: repeat(${num_conditions}, 1fr);
+            justify-items: center;
+            align-items: start;
+            column-gap: 120px;
+            width: fit-content;
+            margin: 40px auto;
+        ">
+    `;
+    for (let i = 0; i < num_conditions; i++) {
+        affording_objects_instructions += `
+            <div style="display: flex; flex-direction: column; align-items: center;">
+                <p style="min-width: 0px; margin-bottom: 10px;"><b>
+                     ${model_names[i]}
+                </b><p>
+            </div>
+        `;
+    }
+    affording_objects_instructions += '</div></p>';
+
+
+    var subjectId =  jsPsych.randomization.randomID(12);
+    var fullurl = window.location.href;
+    var mturkId = jsPsych.data.getURLVariable('workerId');
+    // let turkInfo = jsPsych.turk.turkInfo();
+    var expIndex = 'exp1';
+    var comp_code = 'UN4XPiqNt5748';
+    jsPsych.data.addProperties({
+        subjectId: subjectId,
+        url: fullurl,
+        mturkId: mturkId,
+        expIndex: expIndex,
+        first_condition_isfivepoly: first_condition_idx,
+        model_families_fitted: [1,5],
+    });
+
+
+
+
+// Function for each trial
+function trial_next(trial, is_attention_check, attention_check_correct_button_idx) {
+    var stim = `<img src="${stimulus_imgs[trial][0]}" height="300"></img>
+                <img src="${stimulus_imgs[trial][1]}" height="300"></img>`;
+
+    // Bottom row display of buttons
+    // var trial_text = `
+    //     <p style="position: absolute; top: 3%; left: 38%;">
+    //         <b>Trial ${(trial+1)}/${num_trials}:</b>  Which model is better? 
+    //     </p>
+    // `;
+    if(is_attention_check){
+        var trial_text = `
+        <p style="position: absolute; top: 40%; left: 37%;">
+            <b style="color:red; font-size: 40px;">Attention check!!!</b><br>
+            Please disregard both images.<br> <b>Choose ${model_names[attention_check_correct_button_idx]}</b>.
+        </p>
+    `;
+
+    } else {
+        var trial_text = `
+            <p style="position: absolute; top: 3%; left: 39%;">
+                <b>Which model would you choose?</b>
+            </p>
+        `;
+    }
+    let affording_objects_img_appended = `
+    <div style="
+        position: absolute;
+        top: 55%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        display: grid;
+        grid-template-columns: repeat(${num_conditions}, 1fr);
+        justify-items: center;
+        align-items: start;
+        column-gap: 60px;
+        width: 80%;
+    ">
+    `;
+    for (let i = 0; i < num_conditions; i++) {
+        affording_objects_img_appended += `
+            <div style="display: flex; flex-direction: column; align-items: center;">
+                <img style="margin-bottom: 20px;" src="${stimulus_imgs[trial][i]}" height="450"></img>
+                <button class="jspsych-btn" data-choice="${i}" style="min-width: 100px; margin-bottom: 10px;">
+                    ${model_names[i]}
+                </button>
+            </div>
+        `;
+    }
+
+    affording_objects_img_appended += '</div>';
+    const full_stimulus = affording_objects_img_appended;
+
+    const trial_object = {
+        type: jsPsychHtmlButtonResponse,
+        stimulus: full_stimulus,
+        prompt: trial_text,
+        choices: [],
+        on_load: () => {
+            const trial_start_time = performance.now();  // mark trial start
+
+            document.querySelectorAll('.jspsych-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const rt = performance.now() - trial_start_time;
+                    var N_train_trial = N_trains[Number(trial>=num_trials_per_Ntrain)];
+                    var choice = parseInt(e.target.getAttribute('data-choice')); // 0 is left model, 1 is right model
+                    var stimulus_img_idx = stimulus_img_idxs[trial];
+                    var choose_fivepoly_model = left_model_display[trial]<0.5? choice : (1-choice); // 0 is linear model, 1 is poly model
+                    var left_model_isfivepoly = left_model_display[trial];
+                    var attention_check_passed = is_attention_check? Number(choice==attention_check_correct_button_idx) : -1;
+                    jsPsych.finishTrial({trial_number: trial, 
+                                        N_train: N_train_trial,
+                                        stimulus_number: stimulus_img_idx,
+                                        left_model_isfivepoly: left_model_isfivepoly,
+                                        left_image: stimulus_imgs[trial][0],
+                                        right_image: stimulus_imgs[trial][1],
+                                        response_raw: choice,
+                                        response_isfivepoly: choose_fivepoly_model,
+                                        rt: rt,
+                                        is_attention_check: Number(is_attention_check),
+                                        attention_check_correct_button_idx: attention_check_correct_button_idx,
+                                        attention_check_passed: attention_check_passed,
+                    });
+                });
+            });
+        },
+        
+
+        // data: {
+        //     trial: trial
+        // },
+    };
+
+    return [trial_object, gap];
+}
+
+// Example trial for display during instructions
+var instructions_example_trial = sampleRandomInt(0,num_trials_per_Ntrain);
+var instructions_image_left = sampleRandomInt(0,1); 
+var instructions2_image_left = sampleRandomInt(0,1); 
+    var instructions = {
+        type: jsPsychInstructions,
+        pages: [
+            `<p style='font-size: 30px'> Choose the better model! </p>
+            <p> Imagine you are a scientist. <br>
+                You have collected some past data, and want to predict new, unseen data as accurately as possible. </p> `
+            +'<img src="img_Ntrain1050/scientist.png" height="300"></img>',
+
+            ` <p> Your research involves predicting algae concentrations along a river. <br>
+            At each river site you visited, you record the site's distance from your camp and measure its algae concentration.</p>
+            <p>You visualize your past data as a scatter plot, like in the example below:</p>
+            <p>On the plot, each <b style="color:#BDBDBD">gray data point</b> corresponds to a past site you visited.<br> 
+            The site's distance is shown on the <b>horizontal</b> axis: the farther the site is, the more <b>rightward</b> the data point lies.<br>
+            The site's measured algae concentration is shown on the <b>vertical</b> axis: the higher the concentration, the more <b>upward</b> the data point lies.</p>
+            <img style="margin-bottom: 0px;" src="${instructions_imgs[0]}" height="400"></img>
+            `,
+
+
+            `<p> Your colleague is also collecting his own dataset, but at slightly different sites along the same river. <br>
+                You want to predict your colleague's data points, which are overlaid in <b style="color:#8fba6e">green</b>.</p>
+               <p> This means: your colleague will tell you the distance of the sites he visited (horizontal position). <br> 
+                You must then predict the measured algae concentration (vertical position) there.</p>
+               <p> However, when you are making predictions, you won't see <b style="color:#8fba6e">your colleague's data</b> visualized!<br>
+                You can only make predictions based on <b style="color:#BDBDBD">your past data</b>. </p>
+                <img style="margin-bottom: 0px;" src="${instructions_imgs[1]}" height="400"></img>
+            `,
+            `<p> To make good predictions, you have devised <b style="color:#FF8F00">models</b> according to your <b style="color:#BDBDBD">past data</b>. <br>
+                Each model predicts the measured algae concentration (vertical) at some site, given the site's distance (horizontal). </p>
+            <p>You will see <b style="color:#FF8F00">two candidate models</b>, each visualized as an orange line over your <b style="color:#BDBDBD">past data</b>. <br>
+                <b>You must choose the <b style="color:#FF8F00">model</b> that better predicts <b style="color:#8fba6e">your colleague's data.</b></b><br>
+               This means choosing the model that <b>more closely predicts the vertical positions</b> of <b style="color:#8fba6e">your colleague's data points</b> (which you won't see).</p> 
+            <p> To summarize, below is an example of all you'll see: <b style="color:#BDBDBD">past data</b> and the <b style="color:#FF8F00">two candidate models</b>.<br>
+                The two images depict the same past data points but different candidate models.<br>
+                <img style="margin-bottom: -17px;" src="${instructions_imgs[2+Math.floor(instructions_image_left)]}" height="400"></img>
+                <img style="margin-bottom: -17px;" src="${instructions_imgs[2+(1-Math.floor(instructions_image_left))]}" height="400"></img></p>`,
+
+                
+            // `<p> Here's another caveat: both you and your colleague use the <b>same device</b> to measure algae concentrations.<br>
+            //   To check how reliable the device is, you have made a solution with known algae concentration, and used the device to measure it many times. </p>
+            //   <p> Here are the results, again visualized as a scatter plot: <br>
+            //     The true algae concentration is denoted as a red star. The device\'s repeated measurements are the data points. <br>
+            //     You have binned and counted these data points, visualizing the bin counts as horizontal bars.<br>
+            //     The good news is that <b>the measurements are centered at the true algae concentration</b>. However, they <b>scatter around it</b>.</p>
+            //    <p> This <b>same amount of scatter</b> underlies both your and your colleague\'s data, collected at any river site. <br>
+            //     <img style="margin-bottom: -17px;" src="img_Ntrain1050/instructions_trial_noisesmall_histogram.png" height="400"></img></p>
+            // `
+            // ,
+
+                            
+            `<p> Here's another caveat: both you and your colleague use the <b>same device</b> to measure algae concentrations.<br>
+              To see how reliable the device is, you first tested it using a solution whose algae concentration is <b>already known</b>. </p>
+              <p> In the figure below, the red star denotes the solution\'s true algae concentration. <br>
+                Each data point is one reading from the device---we measured the same solution many times.<br>
+                The horizontal bars show how many readings landed in each concentration interval (longer bars = more readings).<br>
+                The good news is that <b>the measurements are centered at the true algae concentration</b>. However, they <b>scatter around it</b>.</p>
+               <p> This <b>same amount of scatter</b> underlies both your and your colleague\'s data, collected at any river site. <br>
+                <img style="margin-bottom: -17px;" src="img_Ntrain1050/instructions_trial_noisesmall_histogram.png" height="400"></img></p>
+                `,
+
+
+            `<p> The whole game consists of <b>${num_conditions} blocks</b>. Each block contains <b>${num_trials_per_Ntrain} hypothetical scenarios</b>. 
+            <p>  Your past data in each scenario is different, and so is your colleague's data. <br>
+                However in each scenario, both of you are collecting data along the same river (so your past data will be informative of your colleague's). <br>
+                The same device is always used. So, the amount of scatter underlying each data point is identical across scenarios. </p>
+                <p> Please use such information to guide your model choice in each scenario.</p>
+            `,
+
+
+
+           `<p> Now, let\'s move onto payment! </p>
+           <p> In every scenario, you receive <b style="color:#32CD32">+1 reward</b> if you have chosen the model that better predicts <b style="color:#8fba6e">your colleague's data</b>.<br>
+                If you have chosen the other model, you receive <b>0 reward</b>.<br>
+                You won't receive immediate feedback on the reward received.
+                </p>
+           <p> In any case, after you have made a choice, you will be automatically redirected to the next scenario. </p>
+           <p> Your <b style="color:#32CD32"> bonus pay $$</b> is determined by <b>the summed reward you earn across all scenarios.</b>`,
+
+           `<p> If you understand the rules, please click 'Next' to go to the <b>comprehension check</b>. 
+           <br>Otherwise, click 'Previous' to view the instructions again. </p>
+           <p>If you don't get the comprehension questions correct, you won't be able to move on. </p>`
+        ],
+        show_clickable_nav: true,
+        show_page_number: true
+    };
+
+    var gap = {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: " ",
+        choices: 'NO_KEYS',
+        trial_duration: 1000
+    };
+
+    var failed_comprehension_questions = true;
+    let comprehension_questions = {
+        type: jsPsychSurveyMultiChoice,
+        preamble: `Comprehension questions:`,
+        questions: [
+            {
+                prompt: '<b> 1. What is the goal of the game? </b>',
+                options: ['To choose the model that best explains my past data.',
+                          'To choose the model that best predicts my colleague\'s data.',
+                          'To randomly choose models.'], 
+                required: true
+            },
+            {
+                prompt: '<b> 2. Regarding the device used to measure algae concentration, which of the following is FALSE?</b>',
+                options: ['The device\'s measurements are always identical to the true algae concentration on-site.',
+                          'Both you and your colleague\'s data are collected using the same device.',
+                          'The device\'s measurements are centered at the true algae concentration on-site.'], 
+                required: true
+            },
+            {
+                prompt: '<b> 3. What does it mean for a model to predict data points well? </b>',
+                options: ['The model\'s orange line closely predicts their vertical locations.',
+                          'The model\'s orange line closely predicts their horizontal locations.',
+                          'The model\'s orange line looks pretty.'], 
+                required: true
+            },
+            {
+                prompt: '<b> 4. In each scenario, what would you see? </b>',
+                options: ['Only the past data; I need to draw models and choose one of them.',
+                          'My data and the two candidate models to choose between.',
+                          'My data, the two candidate models, and my colleague\'s data.'], 
+                required: true
+            },
+            {
+                prompt: '<b> 5. What determines your bonus in every scenario? </b>',
+                options: ['How fast I choose between models.',
+                          'Whether I have chosen the same model consistently.',
+                          'Whether I have chosen the model that better predicts my colleague\'s data.'], 
+                required: true
+            }
+        ],
+        on_finish: function(data) {
+            var responses = data.response
+            if (responses.Q0.includes('predicts') == true && responses.Q1.includes('identical') == true && responses.Q2.includes('vertical') == true && responses.Q3.includes('between') == true && responses.Q4.includes('predicts') == true) {
+                failed_comprehension_questions = false
+            }
+        }
+    };
+
+    var fail_page = {
+          type: jsPsychHtmlButtonResponse,
+          stimulus: "<p> Oops! You did not pass the comprehension check. </p>",
+          choices: ['<p style="font-size: 20px"><b> View instructions again </b></p>']
+    };
+
+    var fail = {
+        timeline: [fail_page],
+        conditional_function: function() {
+            return failed_comprehension_questions
+        }
+    };
+
+    // Use this code to include comprehension questions
+    var inst_comprehension = {
+        timeline: [instructions, gap, comprehension_questions, fail],
+        loop_function: function(){
+            return failed_comprehension_questions
+        }
+    };
+    // var inst_comprehension = {
+    //     timeline: [instructions, gap], // Remove comprehension questions
+    // };
+
+    var instructions2 = {
+        type: jsPsychInstructions,
+        pages: [
+        `<p>Congratulations on passing the comprehension check! You are about to start the game!</p>
+        <p><b>Gentle Reminders:</b></p>
+        <p>Please make sure to follow the instructions on the screen carefully.</p>
+        <p>In order for your data to be saved successfully, you need to complete the full game, <br>
+            advancing to the completion code screen at the end of the game.</p>`,
+
+        `<p> Throughout the experiment, we have placed some <b style="color:red"> attention check</b> trials.</p>
+        <p> In an attention check trial, you will be instructed to choose a particular model. <br> Please disregard the data on that trial and follow the instructions.</p>
+        <p> These attention checks are necessary, because random choices may render the entire experiment useless. </p>
+        <p> Hence, please stay focused and try your best in the game, all the way until the end!</b>`,
+
+
+
+        `<p>The game will take about 15 minutes to complete.</p>
+        <p>You will earn a guaranteed $`+base_pay_dollars.toFixed(2)+` for completing the game and a potential bonus payment up to $`+bonus_max_dollars.toFixed(2)+`. </p>
+        <p>We thank you for taking the time to complete this task to the best of your ability.</p>
+        <p><b>Please proceed when you are ready to begin the game.</b></p>`
+        ],
+        show_clickable_nav: true
+    };
+
+    var instructions_2point5 = {
+        type: jsPsychInstructions,
+        pages: [
+        `<p>In <b>Block 1</b> out of ${num_conditions}, you will complete <b>${num_trials_per_Ntrain} scenarios</b>.</p>
+        In each scenario, you will see <b>${N_trains[0]} past data points</b>, like the example below.<br>
+        Remember that the two images show exactly the same data points (gray), with different model predictions (orange lines).<br>
+        <img style="margin-bottom: -10px;" src="${instructions1_imgs[2+Math.floor(instructions_image_left)]}" height="400"></img>
+        <img style="margin-bottom: -10px;" src="${instructions1_imgs[2+(1-Math.floor(instructions_image_left))]}" height="400"></img></p>
+        <p> In each scenario, please choose the model that you think would better predict new data.</p>
+        <p><b>Please proceed when you are ready to begin the block.</b></p>
+        `,
+        ],
+        show_clickable_nav: true
+    };
+    
+    var instructions3 = {
+        type: jsPsychInstructions,
+        pages: [
+        `<p> Congratulations on completing <b>Block 1!</b><br>
+         You will now complete <b>Block 2</b>, which lasts another <b>${num_trials_per_Ntrain} scenarios</b>.<br>
+        Unlike Block 1, You will see <b>${N_trains[1]} data points</b> in each scenario, as in the example below: <br>
+            <img style="margin-bottom: 0px;" src="${instructions2_imgs[2+Math.floor(instructions2_image_left)]}" height="400"></img>
+            <img style="margin-bottom: 0px;" src="${instructions2_imgs[2+(1-Math.floor(instructions2_image_left))]}" height="400"></img><br>
+        Again, choose the model that you think would better predict new data.</p>
+        <p> After this, we will collect some demographic information and process your bonus pay!</p>
+        <p><b>Please proceed when you are ready.</b></p>`
+        ],
+        show_clickable_nav: true
+    };
+
+    // Separate preloads to prevent browser from crashing
+    var preload_array = [...instructions_imgs_raw.flat(Infinity), ...stimulus_imgs.flat(Infinity), "img_Ntrain1050/scientist.png", "img_Ntrain1050/instructions_trial_noisesmall.png", "img_Ntrain1050/instructions_trial_noisesmall_histogram.png"];
+    var preload = {
+        type: jsPsychPreload,
+        images: preload_array.slice(0,60),
+        max_load_time: 20000,
+        //show_detailed_errors: true,
+        error_message: '<p>The experiment failed to load. <br>Please try refreshing the page a couple of times.</p>'
+    };
+        var preload1 = {
+        type: jsPsychPreload,
+        images: preload_array.slice(60,120),
+        max_load_time: 20000,
+        //show_detailed_errors: true,
+        error_message: '<p>The experiment failed to load. <br>Please try refreshing the page a couple of times.</p>'
+    };
+        var preload2 = {
+        type: jsPsychPreload,
+        images: preload_array.slice(120,180),
+        max_load_time: 20000,
+        //show_detailed_errors: true,
+        error_message: '<p>The experiment failed to load. <br>Please try refreshing the page a couple of times.</p>'
+    };
+        var preload3 = {
+        type: jsPsychPreload,
+        images: preload_array.slice(180,preload_array.length),
+        max_load_time: 20000,
+        //show_detailed_errors: true,
+        error_message: '<p>The experiment failed to load. <br>Please try refreshing the page a couple of times.</p>'
+    };
+
+    var check_browser = {
+        type: jsPsychBrowserCheck,
+        minimum_width: 600,
+        minimum_height: 400,
+        inclusion_function: function(data) {return (!data.mobile);},
+        exclusion_message:  function(data) {return (data.mobile)? "You must complete this experiment on a computer." : "You cannot participate in this experiment.";}
+    }
+
+    function check_consent(elem) {
+        if (document.getElementById('consent_checkbox').checked) { return true; }
+        else {
+            alert("If you wish to participate, you must check the box.");
+            return false;
+        }
+        return false;
+    };
+
+    var consent = {
+        type: jsPsychExternalHtml,
+        url: 'consent.html',
+        cont_btn: 'start',
+        force_refresh: true,
+        check_fn: check_consent
+    }
+
+    var full_screen = {
+        type: jsPsychFullscreen,
+        fullscreen_mode: true,
+        message: `<p>To avoid distration, this game must be completed in <b>full screen</b> mode by clicking the button below.</p>
+                  <p>Please <b>do not exit full-screen mode until the end</b> of the game.</p><br>`,
+        button_label: "Enter full screen"
+    }
+
+    var demographics = {
+        type: jsPsychSurvey,
+        pages: [[
+            {type:'html', prompt:'<p>Congratuations for completing all questions!</p> <p>We need some more information from you. This will not be associated with your MTurk profile, nor will it impact you in any way.</p>'},
+            {
+                type: 'drop-down',
+                prompt: 'Gender',
+                name: 'gender',
+                required: true,
+                options: ['Female', 'Male', 'Non-binary', 'Other'],
+            },
+            {
+                type: 'text',
+                prompt: 'Age',
+                name: 'age',
+                input_type: 'number',
+                required: true,
+                textbox_columns: 3
+            },
+            {
+                type: 'text',
+                prompt: 'Please summarize the task you just completed in 1-2 sentences, so that we know you have been paying attention!',
+                name: 'summary',
+                required: true,
+                textbox_rows: 3,
+            },
+            {
+                type: 'text',
+                prompt: 'Optional question: We\'re always trying to improve. Please let us know if you have any comments.',
+                name: 'comment',
+                required: false,
+                textbox_rows: 3,
+            }
+        ]],
+        show_question_numbers: 'on',
+        on_finish: function(data) {
+            data.gender = data.response.gender;
+            data.age = data.response.age;
+            data.summary = data.response.summary;
+            data.comment = data.response.comment;
+                var interaction_data = jsPsych.data.getInteractionData();
+                data.screen = interaction_data.json();
+        },
+        save_trial_parameters: {accuracy: false}
+    }
+
+    var bonus_summary = {
+        type: jsPsychHtmlButtonResponse,
+            stimulus: function() {
+                var bonus = bonus_max_dollars*((cumulative_reward-min_cumulative_reward)/(max_cumulative_reward-min_cumulative_reward));
+                if((max_cumulative_reward-min_cumulative_reward)<=0.01) { // What if the only choice is to give up across all trials?
+                    bonus = bonus_max_dollars;
+                }
+                return `<p style='font-size:25px'><b> Your bonus </b></p>
+                    <p> You have earned a total reward of <b>${cumulative_reward}</b> points.</p>
+                    <p> The possible range of total rewards was from ${min_cumulative_reward} to ${max_cumulative_reward}.
+                    <br> Therefore, your bonus is <b style="color:#32CD32">\$${bonus.toFixed(2)}</b>.
+                    <br> IMPORTANT: Please click 'Next' to complete the game.`
+            },
+            choices: ['Next'],
+            data: function(){
+                var bonus = bonus_max_dollars*((cumulative_reward-min_cumulative_reward)/(max_cumulative_reward-min_cumulative_reward));
+                console.log(bonus)
+                return {bonus: bonus.toFixed(2)}
+            }
+        }
+
+    // start exp
+    var timeline = [];
+    timeline.push(preload,preload1,preload2,preload3);
+    timeline.push(check_browser);
+    timeline.push(consent);
+    timeline.push(full_screen);
+    timeline.push(inst_comprehension);
+    timeline.push(instructions2, gap, instructions_2point5, gap);
+
+
+    task_timeline_1 = [];
+    task_timeline_2 = [];
+    for (let t = 0; t < num_trials_per_Ntrain; t++) {
+        task_timeline_1.push(trial_next(t,false,-1))
+    }
+    // Insert attention checks:
+    for (let k=0; k<num_attention_checks_per_Ntrain; k++){
+        var attention_check = trial_next(sampleRandomInt(0, num_trials_per_Ntrain),true,sampleRandomInt(0,1));
+        var attention_check_trialidx = sampleRandomInt(0, task_timeline_1.length+1);
+        task_timeline_1.splice(attention_check_trialidx, 0, attention_check);
+    }
+
+    for (let t = num_trials_per_Ntrain; t < num_trials; t++) {
+        task_timeline_2.push(trial_next(t,false,-1))
+    }
+    // Insert attention checks:
+    for (let k=0; k<num_attention_checks_per_Ntrain; k++){
+        var attention_check = trial_next(sampleRandomInt(num_trials_per_Ntrain, 2*num_trials_per_Ntrain),true,sampleRandomInt(0,1));
+        var attention_check_trialidx = sampleRandomInt(0, task_timeline_2.length+1);
+        task_timeline_2.splice(attention_check_trialidx, 0, attention_check);
+    }
+
+    timeline.push(...(task_timeline_1.flat()))
+    timeline.push(instructions3,gap);
+    timeline.push(...(task_timeline_2.flat()))
+
+    timeline.push(demographics)
+    //timeline.push(bonus_summary)
+
+    // save data
+    function saveData(name, data) {
+    	var xhr = new XMLHttpRequest();
+          xhr.open('POST', 'save_data.php');
+          xhr.setRequestHeader('Content-Type', 'application/json');
+          xhr.send(JSON.stringify({filename: name, filedata: data}));    
+    } 
+
+    let save_data = {
+        type: jsPsychCallFunction,
+        func: function(){ 
+            // saveData(expIndex + '_' + subjectId + '_output', jsPsych.data.get().csv()); 
+            saveData(mturkId, jsPsych.data.get().csv()); 
+
+            // // Below is saving CSV file locally. Comment out later!!!
+            // var experiment_data = jsPsych.data.get().csv();
+            //     var filename = "HumanData.csv";
+            //     downloadCSV(experiment_data, filename);
+
+        }
+    }
+    timeline.push(save_data);
+
+    let completion = {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: `<p> Your response has been recorded!</p>
+        <p> Your completion code is</p> <b>${comp_code}</b>
+        <p> Please copy this code into Mechanical Turk. You will not be be able to access this code after leaving this page!</p>
+        <p> No further action is necessary; you may now exit the window at any time.</p>`,
+        choices: 'NO_KEYS',
+    }
+    timeline.push(completion);
+
+    jsPsych.run(timeline);
+
+  </script>
+</html>
+
+
+

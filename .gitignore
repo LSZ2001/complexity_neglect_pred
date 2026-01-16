@@ -1,0 +1,5 @@
+# Ignore these specific large pickle files
+analysis/modelfits/glme_numpyro_2000_2000_coarse_seed0.pickle
+analysis/modelfits/glme_numpyro_2000_2000_fine_seed0.pickle
+analysis/modelfits/glme_numpyro_2000_2000_null_seed0.pickle
+analysis/data/df_allsimtrials.pickle
