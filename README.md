@@ -1,5 +1,5 @@
 # complexity_neglect_pred
- Code for the manuscript "Humans neglect Occam's razor in predictive model selection". The authors are Shuze Liu*, Yang Xiang*, and Samuel J. Gershman. Here, (*) denotes equal contribution.
+ Code for the manuscript "Humans neglect complexity in predictive model selection". The authors are Shuze Liu*, Yang Xiang*, and Samuel J. Gershman. Here, (*) denotes equal contribution.
 
  https://osf.io/preprints/psyarxiv/t2b9r_v1
 
