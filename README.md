@@ -3,7 +3,7 @@
 
 - **Bold** words are .py, .ipynb, and .sh filenames.
 - *Italicized* words are .csv and .pickle filenames or directory folder names.
-- Some files are too large for the Github repository. They could be found in the OSF project repository: XXX.
+- Some files are too large for the Github repository. They could be found in the OSF project repository: https://osf.io/48ren/overview?view_only=d339617113a648c087afd7c09dc0f9e7.
 
 The code runs on Python 3.9.5 and Numpy 2.0.2.
 
