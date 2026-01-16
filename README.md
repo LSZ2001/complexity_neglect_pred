@@ -34,5 +34,5 @@ The code runs on Python 3.9.5 and Numpy 2.0.2.
 
 ### *modelfits* subfolder
 - It contains saved files for HMC model fits, and their model comparison result.
-- The files *glme_numpyro_2000_2000_coarse_seed0.pickle*, *..._full_...*, and *..._null_...* are too large for the Github repository. See OSF project for the files. 
+- The NUTS trace files *glme_numpyro_2000_2000_coarse_seed0.pickle*, *..._full_...*, and *..._null_...* are too large for the Github repository. See OSF project for the files. 
 
