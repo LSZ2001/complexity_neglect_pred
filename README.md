@@ -1,5 +1,5 @@
 # complexity_neglect_pred
- Code for the manuscript "Humans neglect Occam's razor in predictive model selection". The authors are Shuze Liu*, Yang Xiang(, and Samuel J. Gershman. Here, * denotes equal contribution.
+ Code for the manuscript "Humans neglect Occam's razor in predictive model selection". The authors are Shuze Liu*, Yang Xiang*, and Samuel J. Gershman. Here, (*) denotes equal contribution.
 
 - **Bold** words are .py, .ipynb, and .sh filenames.
 - *Italicized* words are .csv and .pickle filenames or directory folder names.
