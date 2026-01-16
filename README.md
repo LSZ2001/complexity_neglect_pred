@@ -21,7 +21,7 @@ The code runs on Python 3.9.5 and Numpy 2.0.2.
 ## *Analysis* folder
 - **manuscript_allfigures_submission.ipynb** creates all figures for the manuscript, based on the human data and the saved model fit files.
 - **parse_datafiles.ipynb** converts raw, participant-specific datafiles to files seen in the *data* subfolder.
-- Other **.py** and **.sh** files are definitions and clusting .sh files for fitting the Null, Coarse, and Fine models. 
+- Other **.py** and **.sh** files are definitions and cluster .sh files for fitting the Null, Coarse, and Fine models. 
 
 ### *data* subfolder
 - It contains raw human data for each experiment, in both .csv and .pickle formats.
