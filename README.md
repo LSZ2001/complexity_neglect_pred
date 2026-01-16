@@ -14,6 +14,7 @@ The code runs on Python 3.9.5 and Numpy 2.0.2.
   
 ## *Experiment* folder
 - It contains the Javascript code for the experiment links above.
+- The *data/exps* folder is current empty. Raw participant .csv datafiles should go here. For an anonymized datafile containing all participants' data, see the subfolder *analysis/data*.  
 
 ## *Simulations* folder
 - It contains code for generating experimental stimuli: **dataset_gen_largenoise.ipynb** and **dataset_gen_smallnoise.ipynb**.
@@ -24,7 +25,7 @@ The code runs on Python 3.9.5 and Numpy 2.0.2.
 - Other **.py** and **.sh** files are definitions and cluster .sh files for fitting the Null, Coarse, and Fine models. 
 
 ### *data* subfolder
-- It contains raw human data for each experiment, in both .csv and .pickle formats.
+- It contains raw human data for each experiment in .csv format.
 - The file *df_allsimtrials.pickle* is too large for the Github repository. See OSF project for the file. 
 
 ### *fig* subfolder
