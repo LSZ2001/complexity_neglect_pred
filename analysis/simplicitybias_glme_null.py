@@ -5,7 +5,7 @@
 #  - response_choosecomplexmodel (0/1)
 #  - OLSnoise_est_mean (float > 0)     # or swap to noise_var if you prefer
 #  - sample_size_inv  (float > 0)      # 1/N_train
-#  - dD  (ΔD = D_simple - D_complex; in your data ΔD < 0)
+#  - dD  (ΔD = D_simple - D_complex; hence ΔD < 0)
 #  - trainMSE_modeldiff (ΔtrainMSE = trainMSE_simple - trainMSE_complex)
 #     NOTE: More positive ΔtrainMSE favors choosing the complex model.
 # ============================================================

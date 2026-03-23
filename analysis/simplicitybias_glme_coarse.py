@@ -5,7 +5,7 @@
 #  - response_choosecomplexmodel (0/1)
 #  - OLSnoise_est_mean (float > 0)     # or swap to noise_var if you prefer
 #  - sample_size_inv  (float > 0)      # 1/N_train
-#  - dD  (ΔD = D_simple - D_complex; in your data ΔD < 0)
+#  - dD  (ΔD = D_simple - D_complex; hence ΔD < 0)
 #  - trainMSE_modeldiff (ΔtrainMSE = trainMSE_simple - trainMSE_complex)
 #     NOTE: More positive ΔtrainMSE favors choosing the complex model.
 # ============================================================
@@ -68,7 +68,7 @@ def prepare_tensors(df):
     dD_raw = -jnp.array(df["dD"].values, dtype=jnp.float32)
     dTrain = -jnp.array(df["trainMSE_modeldiff"].values, dtype=jnp.float32)
 
-    dTrain_z = dTrain  # keep unscaled to match your Pyro code
+    dTrain_z = dTrain  
 
     S = int(subj_codes.categories.size)
     N = len(df)
@@ -104,7 +104,7 @@ def powerlaw_logit_model_coarse(y, V, invN, dD_raw, dTrain_z, subj_idx, S):
     # Slopes on ΔtrainMSE
     mu_t    = numpyro.sample("mu_t",    dist.Normal(1, 10))
     sigma_t = numpyro.sample("sigma_t", dist.HalfCauchy(2.5))
-    # κ hierarchy (unconstrained, as in your Pyro code)
+    # κ hierarchy (unconstrained)
     mu_k   = numpyro.sample("mu_k",  dist.Normal(1, 10))
     sig_k  = numpyro.sample("sig_k", dist.HalfCauchy(2.5))
 
